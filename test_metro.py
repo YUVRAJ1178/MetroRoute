@@ -67,7 +67,19 @@ def test_metro_route_finder():
     assert path_d is not None
     print(f"PASS: Inter-network route to Greater Noida found (Stops: {stops_d})\n")
 
-    print("ALL TESTS PASSED SUCCESSFULLY! The BFS algorithm is working accurately across 264 stations.")
+    # Test Case 6: Realistic Station Dwell Delays & Walking Distance to Tracks
+    print("--- Test Case 6: Station Delays & Walking Distances ---")
+    path_tf, stops_tf = metro.bfs_shortest_path("Karol Bagh", "New Delhi")
+    analysis = metro.get_route_analysis(path_tf)
+    assert analysis["total_walking_m"] > 0, "Walking distance should be computed"
+    assert analysis["total_distance_km"] > 0.0, "Rail track distance should be computed"
+    assert len(analysis["transfers"]) == 1, "Should have 1 interchange at Rajiv Chowk"
+    assert analysis["transfers"][0]["station"] == "Rajiv Chowk"
+    assert analysis["transfers"][0]["walk_m"] == 180, "Rajiv Chowk interchange walk is 180m"
+    assert analysis["total_time_min"] > 0, "Total journey time should be computed"
+    print(f"PASS: Journey Analysis: {stops_tf} stops | {analysis['total_distance_km']} km rail | {analysis['total_walking_m']} m walking | {analysis['total_time_min']} mins est. time\n")
+
+    print("ALL TESTS PASSED SUCCESSFULLY! BFS routing, station delays, and walking metrics are verified.")
 
 
 if __name__ == "__main__":
