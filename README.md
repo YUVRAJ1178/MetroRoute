@@ -77,21 +77,7 @@ streamlit run app.py
 ```
 
 Access the application in your browser at `http://localhost:8501`.
+OR
+https://metroroute-es38.onrender.com/
 
 ---
-
-## 4. How to Deploy Online
-
-### Option A: Render (1-Click Deployment)
-1. Sign in to [dashboard.render.com](https://dashboard.render.com) with GitHub.
-2. Click **New +** ➔ **Web Service** ➔ Select `YUVRAJ1178/MetroRoute`.
-3. Render automatically detects `render.yaml`.
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `streamlit run app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true`
-4. Click **Deploy Web Service** to get your free public URL (`https://metroroute-xxxx.onrender.com`).
-
-### Option B: Streamlit Community Cloud
-1. Visit [share.streamlit.io](https://share.streamlit.io).
-2. Connect your GitHub account and select repository `YUVRAJ1178/MetroRoute`.
-3. Set Main file path: `app.py`.
-4. Click **Deploy!**
