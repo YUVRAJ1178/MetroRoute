@@ -201,7 +201,106 @@ st.markdown("""
         border-radius: 3px;
         display: inline-block;
     }
-    </style>
+    
+    /* Live Train Arrival & Delay Banner */
+    .train-live-banner {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-left: 5px solid #16a34a;
+        padding: 9px 14px;
+        border-radius: 8px;
+        margin: 10px 0 16px 0;
+        font-size: 0.88rem;
+        color: #166534 !important;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .pulse-dot {
+        width: 10px;
+        height: 10px;
+        background: #16a34a;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7);
+        animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+    }
+
+    /* Metric Grid inside Summary Card */
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+        margin-bottom: 8px;
+    }
+    .metric-item {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 8px 6px;
+        text-align: center;
+    }
+    .metric-val {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #0284c7 !important;
+        line-height: 1.2;
+    }
+    .metric-lbl {
+        font-size: 0.72rem;
+        color: #64748b !important;
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-top: 2px;
+    }
+
+    /* Station metadata subline */
+    .station-info-col {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        min-width: 0;
+    }
+    .station-meta-line {
+        font-size: 0.76rem;
+        color: #64748b !important;
+        margin-top: 3px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+    }
+    .meta-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        background: #f1f5f9;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        color: #475569 !important;
+    }
+    .meta-tag.walk {
+        background: #fef3c7;
+        color: #92400e !important;
+        font-weight: 600;
+    }
+    .meta-tag.time {
+        background: #e0f2fe;
+        color: #0369a1 !important;
+        font-weight: 600;
+    }
+    .meta-tag.dwell {
+        background: #f1f5f9;
+        color: #64748b !important;
+    }
+</style>
 """, unsafe_allow_html=True)
 
 # ----------------- Initialize Graph (Live Dynamic Load) -----------------
@@ -311,55 +410,106 @@ with col_control:
     elif len(route_path) == 1:
         st.info(f"ℹ️ **Origin and Destination are identical ({route_path[0]}).** Total stops: 0.")
     else:
-        # Route Analysis: Identify transfers and legs
+        # Route Analysis: Identify transfers, walking distances, and station delays
         analysis = metro.get_route_analysis(route_path)
         transfers = analysis["transfers"]
+        itinerary = analysis["itinerary"]
 
         st.markdown(f"""
             <div class="summary-card">
                 <h4>✅ Shortest Route Found</h4>
-                <div style="color: #334155; margin-bottom: 6px;">From <b>{route_path[0]}</b> ➔ <b>{route_path[-1]}</b></div>
-                <div style="display: flex; gap: 20px;">
-                    <div>Stops: <span class="stat-badge">{total_stops}</span></div>
-                    <div>Stations: <span class="stat-badge">{len(route_path)}</span></div>
-                    <div>Transfers: <span class="stat-badge">{len(transfers)}</span></div>
+                <div style="color: #334155; margin-bottom: 8px; font-size: 1.05rem;">From <b>{route_path[0]}</b> ➔ <b>{route_path[-1]}</b></div>
+                <div class="metric-grid">
+                    <div class="metric-item">
+                        <div class="metric-val">{analysis['total_time_min']} m</div>
+                        <div class="metric-lbl">Est. Time</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-val">{total_stops}</div>
+                        <div class="metric-lbl">Stops</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-val">{analysis['total_distance_km']} km</div>
+                        <div class="metric-lbl">Rail Dist.</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-val">{analysis['total_walking_m']} m</div>
+                        <div class="metric-lbl">Walk Dist.</div>
+                    </div>
+                </div>
+                <div style="font-size: 0.82rem; color: #475569; margin-top: 8px; padding-top: 6px; border-top: 1px solid #e0f2fe;">
+                    🚆 <b>Travel Breakdown:</b> Train Ride: ~{analysis['train_ride_min']} min • Station Boarding Delays: ~{analysis['station_dwell_min']} min • Platform/Track Walking: ~{round(analysis['transfer_walk_min'] + 3.5, 1)} min • Origin Wait: ~{analysis['origin_wait_min']} min
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # Show Transfer Warnings if line changes are required
+        # Live Train Arrival & Delays Status Banner
+        st.markdown(f"""
+            <div class="train-live-banner">
+                <span class="pulse-dot"></span>
+                <span><b>Live Station Status:</b> Next train arrives at <b>{route_path[0]}</b> platform in <b>~{analysis['origin_wait_min']} min</b>. Standard headway: 3 mins. Intermediate dwell stop delay: 35s.</span>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # Show Transfer Warnings with Walking Distances
         if transfers:
             for tf in transfers:
                 st.markdown(f"""
                     <div class="transfer-alert">
-                        🔄 <b>Interchange at {tf['station']}:</b> Change from <b>{tf['from_line']}</b> to <b>{tf['to_line']}</b>
+                        🔄 <b>Interchange at {tf['station']}:</b> Change from <b>{tf['from_line']}</b> to <b>{tf['to_line']}</b><br/>
+                        🚶 <b>Walking to Connecting Platform:</b> Walk <b>{tf['walk_m']} meters</b> (approx. <b>{tf['walk_min']} mins</b>) via {tf['description']}<br/>
+                        ⏱️ <b>Connecting Train Wait Delay:</b> Next train arrives in <b>~{tf['wait_min']} mins</b>
                     </div>
                 """, unsafe_allow_html=True)
 
-        st.markdown("##### 🚶 Station-by-Station Itinerary:")
-        for idx, station in enumerate(route_path):
+        st.markdown("##### 🚶 Station-by-Station Itinerary & Timeline:")
+        for idx, it_item in enumerate(itinerary):
+            station = it_item["station"]
             lines = metro.get_station_lines(station)
             is_start = idx == 0
-            is_end = idx == len(route_path) - 1
-            is_interchange = len(lines) > 1 and not (is_start or is_end)
+            is_end = idx == len(itinerary) - 1
+            is_interchange = it_item["is_interchange"]
 
             if is_start:
                 pill_label = "Origin"
                 pill_class = "station-pill origin"
+                meta_html = f"""
+                    <span class="meta-tag walk">🚶 Walk 120m to track (~2 min)</span>
+                    <span class="meta-tag time">🚆 Train departs: {it_item['time_str']}</span>
+                    <span class="meta-tag dwell">⏱️ Frequency: Every 3 min</span>
+                """
             elif is_end:
                 pill_label = "Destination"
                 pill_class = "station-pill dest"
+                meta_html = f"""
+                    <span class="meta-tag time">🏁 Train arrives: {it_item['time_str']}</span>
+                    <span class="meta-tag walk">🚶 Walk 100m to exit gate (~1.5 min)</span>
+                    <span class="meta-tag dwell">📏 {it_item['track_dist_km']} km from prev stop</span>
+                """
             elif is_interchange:
-                pill_label = f"Interchange ({' / '.join(lines)})"
+                pill_label = f"Interchange ({it_item['line']})"
                 pill_class = "station-pill interchange"
+                meta_html = f"""
+                    <span class="meta-tag time">⏱️ Arrive: {it_item['time_str']}</span>
+                    <span class="meta-tag walk">🚶 Walk {it_item['walk_m']}m between tracks (~{it_item['walk_min']} min)</span>
+                    <span class="meta-tag dwell">⏱️ Connecting train in: ~{it_item['wait_min']} min</span>
+                """
             else:
-                pill_label = lines[0] if lines else "Line"
+                pill_label = it_item["line"]
                 pill_class = "station-pill"
+                meta_html = f"""
+                    <span class="meta-tag time">⏱️ {it_item['time_str']}</span>
+                    <span class="meta-tag dwell">📏 {it_item['track_dist_km']} km track</span>
+                    <span class="meta-tag dwell">⏳ 35s dwell stop</span>
+                """
 
             st.markdown(f"""
                 <div class="station-node">
                     <span class="station-num">{idx + 1}.</span>
-                    <span class="station-name">{station}</span>
+                    <div class="station-info-col">
+                        <span class="station-name">{station}</span>
+                        <div class="station-meta-line">{meta_html}</div>
+                    </div>
                     <span class="{pill_class}">{pill_label}</span>
                 </div>
             """, unsafe_allow_html=True)
