@@ -184,6 +184,132 @@ DISPLAY_LABELS = {
     'Shalimar Bagh': 'Shalimar Bagh',
 }
 
+
+# Realistic Interchange Walking Distances & Platform Walk Times (meters & minutes)
+INTERCHANGE_WALK_DATA = {
+    'Rajiv Chowk': {
+        'distance_m': 180,
+        'walk_min': 3.0,
+        'description': 'Underground concourse & escalators (Yellow ⇄ Blue platform)'
+    },
+    'Kashmere Gate': {
+        'distance_m': 280,
+        'walk_min': 4.5,
+        'description': '3-level mega hub (Red ⇄ Yellow ⇄ Violet platforms)'
+    },
+    'Hauz Khas': {
+        'distance_m': 320,
+        'walk_min': 5.0,
+        'description': 'Deep underground escalators (Yellow ⇄ Magenta platform)'
+    },
+    'Botanical Garden': {
+        'distance_m': 160,
+        'walk_min': 2.5,
+        'description': 'Elevated viaduct link (Blue ⇄ Magenta platform)'
+    },
+    'Netaji Subhash Place': {
+        'distance_m': 190,
+        'walk_min': 3.0,
+        'description': 'Pedestrian subway connection (Red ⇄ Pink platform)'
+    },
+    'Central Secretariat': {
+        'distance_m': 110,
+        'walk_min': 1.5,
+        'description': 'Cross-platform island transfer (Yellow ⇄ Violet)'
+    },
+    'Mandi House': {
+        'distance_m': 120,
+        'walk_min': 2.0,
+        'description': 'Direct subway passenger corridor (Blue ⇄ Violet platform)'
+    },
+    'Dilli Haat INA': {
+        'distance_m': 140,
+        'walk_min': 2.0,
+        'description': 'Concourse interchange corridor (Yellow ⇄ Pink platform)'
+    },
+    'Lajpat Nagar': {
+        'distance_m': 175,
+        'walk_min': 2.5,
+        'description': 'Integrated concourse walkway (Pink ⇄ Violet platform)'
+    },
+    'Anand Vihar': {
+        'distance_m': 210,
+        'walk_min': 3.5,
+        'description': 'Foot over-bridge connecting elevated & underground platforms'
+    },
+    'Kirti Nagar': {
+        'distance_m': 150,
+        'walk_min': 2.5,
+        'description': 'Ramped connector between Blue & Green branch'
+    },
+    'Inderlok': {
+        'distance_m': 170,
+        'walk_min': 2.5,
+        'description': 'Elevated transition bridge (Red ⇄ Green platform)'
+    },
+    'Sector 52': {
+        'distance_m': 300,
+        'walk_min': 5.0,
+        'description': 'Dedicated pathway to Noida Sector 51 (Aqua Line)'
+    },
+    'Noida Sector 51': {
+        'distance_m': 300,
+        'walk_min': 5.0,
+        'description': 'Dedicated pathway to Sector 52 (Blue Line)'
+    },
+    'Dwarka Sector 21': {
+        'distance_m': 140,
+        'walk_min': 2.0,
+        'description': 'Direct underground ramp (Blue ⇄ Airport Express)'
+    },
+    'Welcome': {
+        'distance_m': 160,
+        'walk_min': 2.5,
+        'description': 'Concourse level link between Red & Pink Line'
+    },
+    'Yamuna Bank': {
+        'distance_m': 70,
+        'walk_min': 1.0,
+        'description': 'Cross-platform island interchange (Blue Main ⇄ Branch)'
+    },
+    'Mayur Vihar-I': {
+        'distance_m': 150,
+        'walk_min': 2.5,
+        'description': 'Elevated transfer bridge (Blue ⇄ Pink platform)'
+    },
+    'Azadpur': {
+        'distance_m': 180,
+        'walk_min': 3.0,
+        'description': 'Connecting tunnel walkway (Yellow ⇄ Pink platform)'
+    },
+    'Rajouri Garden': {
+        'distance_m': 160,
+        'walk_min': 2.5,
+        'description': 'Footbridge between elevated Blue & Pink platforms'
+    },
+    'Sikandarpur': {
+        'distance_m': 190,
+        'walk_min': 3.0,
+        'description': 'Skywalk connecting Yellow Line to Rapid Metro'
+    },
+    'New Delhi': {
+        'distance_m': 220,
+        'walk_min': 3.5,
+        'description': 'Underground concourse between Yellow Line & Airport Express'
+    },
+    'Kalkaji Mandir': {
+        'distance_m': 170,
+        'walk_min': 2.5,
+        'description': 'Direct skywalk between Violet & Magenta platform'
+    },
+    'Janakpuri West': {
+        'distance_m': 210,
+        'walk_min': 3.5,
+        'description': 'Longest escalator in India connecting Blue & Magenta Line'
+    }
+}
+
+
 class MetroGraph:
     """
     Represents the metro network as an unweighted, undirected graph.
@@ -325,12 +451,68 @@ class MetroGraph:
 
         return path, total_stops
 
-    def get_route_analysis(self, path):
+    def get_route_analysis(self, path, departure_time=None):
+        """
+        Computes detailed journey metrics including:
+        - Transfers and line switching details
+        - Walking distance to metro tracks (at entry, exit, and interchange hubs)
+        - Station dwell delays and train arrival wait times (headway delays)
+        - Real-time simulated ETA itinerary for every station on the route
+        """
         if not path or len(path) < 2:
-            return {"transfers": [], "legs": []}
+            return {
+                "transfers": [],
+                "legs": [],
+                "total_distance_km": 0.0,
+                "total_walking_m": 0,
+                "train_ride_min": 0,
+                "station_dwell_min": 0.0,
+                "transfer_walk_min": 0.0,
+                "transfer_wait_min": 0.0,
+                "origin_wait_min": 0.0,
+                "total_time_min": 0,
+                "itinerary": []
+            }
+
+        import datetime
+
+        if departure_time is None:
+            departure_time = datetime.datetime.now()
 
         legs = []
         transfers = []
+        itinerary = []
+
+        total_distance_km = 0.0
+        # Walking from station entrance gate/concourse to platform track: ~120m (2 min)
+        total_walking_m = 120
+        current_time = departure_time + datetime.timedelta(minutes=2.0)
+
+        # Initial train arrival / headway wait at origin platform
+        first_leg_line = self.get_edge_line(path[0], path[1])
+        initial_wait_min = 2.5 if "Airport" not in first_leg_line else 5.0
+        current_time += datetime.timedelta(minutes=initial_wait_min)
+
+        # Record Origin station
+        itinerary.append({
+            "station": path[0],
+            "time_str": current_time.strftime("%I:%M %p"),
+            "line": first_leg_line,
+            "action": "Origin - Board Train",
+            "dwell_sec": 0,
+            "track_dist_km": 0.0,
+            "walk_m": 120,
+            "walk_to_track_m": 120,
+            "walk_time_min": 2.0,
+            "wait_delay_min": initial_wait_min,
+            "is_interchange": False,
+            "transfer_info": None
+        })
+
+        accumulated_dwell_min = 0.0
+        accumulated_ride_min = 0.0
+        accumulated_transfer_walk_min = 0.0
+        accumulated_transfer_wait_min = 0.0
 
         for i in range(len(path) - 1):
             u = path[i]
@@ -338,16 +520,95 @@ class MetroGraph:
             line = self.get_edge_line(u, v)
             legs.append({"from": u, "to": v, "line": line})
 
-            if i > 0:
-                prev_line = legs[i - 1]["line"]
-                if line != prev_line:
-                    transfers.append({
-                        "station": u,
-                        "from_line": prev_line,
-                        "to_line": line
-                    })
+            # Calculate inter-station distance and train running time
+            if "Airport Express" in line:
+                hop_dist = 3.8
+                hop_ride_min = 3.2
+            elif "Rapid Metro" in line:
+                hop_dist = 1.0
+                hop_ride_min = 1.8
+            else:
+                hop_dist = 1.3
+                hop_ride_min = 2.1
 
-        return {"transfers": transfers, "legs": legs}
+            total_distance_km += hop_dist
+            accumulated_ride_min += hop_ride_min
+            current_time += datetime.timedelta(minutes=hop_ride_min)
+
+            is_dest = (i + 1 == len(path) - 1)
+            is_transfer = False
+            tf_info = None
+
+            if not is_dest:
+                next_line = self.get_edge_line(v, path[i + 2])
+                if next_line != line:
+                    is_transfer = True
+                    walk_data = INTERCHANGE_WALK_DATA.get(v, {
+                        'distance_m': 150,
+                        'walk_min': 2.5,
+                        'description': 'Concourse walkway & escalators'
+                    })
+                    tf_walk_m = walk_data['distance_m']
+                    tf_walk_min = walk_data['walk_min']
+                    tf_wait_min = 3.0  # Average headway wait delay for connecting train
+
+                    total_walking_m += tf_walk_m
+                    accumulated_transfer_walk_min += tf_walk_min
+                    accumulated_transfer_wait_min += tf_wait_min
+
+                    tf_info = {
+                        "station": v,
+                        "from_line": line,
+                        "to_line": next_line,
+                        "walk_m": tf_walk_m,
+                        "walk_min": tf_walk_min,
+                        "wait_min": tf_wait_min,
+                        "description": walk_data['description']
+                    }
+                    transfers.append(tf_info)
+                    current_time += datetime.timedelta(minutes=(tf_walk_min + tf_wait_min))
+                else:
+                    # Intermediate station dwell delay (passenger boarding / train stop)
+                    dwell_sec = 35
+                    accumulated_dwell_min += dwell_sec / 60.0
+                    current_time += datetime.timedelta(seconds=dwell_sec)
+            else:
+                # Destination: Walk from platform track to AFC exit gates (~100m, 1.5 min)
+                total_walking_m += 100
+                current_time += datetime.timedelta(minutes=1.5)
+
+            itinerary.append({
+                "station": v,
+                "time_str": current_time.strftime("%I:%M %p"),
+                "line": line if not is_transfer else next_line,
+                "action": "Destination - Alight & Exit" if is_dest else ("Interchange Transfer" if is_transfer else "Station Stop"),
+                "dwell_sec": 0 if (is_dest or is_transfer) else 35,
+                "track_dist_km": round(hop_dist, 1),
+                "walk_m": 100 if is_dest else (tf_info["walk_m"] if is_transfer else 0),
+                "walk_min": 1.5 if is_dest else (tf_info["walk_min"] if is_transfer else 0.0),
+                "wait_min": tf_info["wait_min"] if is_transfer else 0.0,
+                "is_interchange": is_transfer,
+                "transfer_info": tf_info
+            })
+
+        total_time_min = round(
+            2.0 + initial_wait_min + accumulated_ride_min + accumulated_dwell_min
+            + accumulated_transfer_walk_min + accumulated_transfer_wait_min + 1.5
+        )
+
+        return {
+            "transfers": transfers,
+            "legs": legs,
+            "total_distance_km": round(total_distance_km, 1),
+            "total_walking_m": total_walking_m,
+            "train_ride_min": round(accumulated_ride_min),
+            "station_dwell_min": round(accumulated_dwell_min, 1),
+            "transfer_walk_min": round(accumulated_transfer_walk_min, 1),
+            "transfer_wait_min": round(accumulated_transfer_wait_min, 1),
+            "origin_wait_min": round(initial_wait_min, 1),
+            "total_time_min": total_time_min,
+            "itinerary": itinerary
+        }
 
 
 def build_sample_metro_network():
